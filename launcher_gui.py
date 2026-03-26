@@ -29,7 +29,7 @@ class SetupWorker(QRunnable):
                 return
 
             # Install Fabric
-            self.signals.progress.emit("Installing Fabric mod loader...")
+            self.signals.progress.emit("Installing Fabric...")
             if not self.launcher.install_fabric(self.signals.progress.emit):
                 self.signals.finished.emit(False, "Failed to install Fabric")
                 return
@@ -49,10 +49,11 @@ class SetupWorker(QRunnable):
                 self.signals.finished.emit(False, "Failed to download authlib-injector")
                 return
 
-            self.signals.finished.emit(True, "Setup completed successfully!")
+            self.signals.finished.emit(True, "Setup fini!")
 
+    
         except Exception as e:
-            self.signals.finished.emit(False, f"Setup failed: {str(e)}")
+            self.signals.finished.emit(False, f"Setup fini avec erreur: {str(e)}")
 
 class LaunchWorker(QRunnable):
     def __init__(self, launcher, username, max_ram):
@@ -137,7 +138,7 @@ class QwarkSMPLauncher(QMainWindow):
         self.setup_system_tray()
 
     def init_ui(self):
-        self.setWindowTitle("Lanceur QwarkSMP")
+        self.setWindowTitle("QwarkSMP Launcher")
         self.setFixedSize(500, 650)
         self.setWindowIcon(self.create_icon())
         
@@ -224,7 +225,7 @@ class QwarkSMPLauncher(QMainWindow):
         layout.setContentsMargins(30, 30, 30, 30)
 
         # Title
-        title_label = QLabel("Lanceur QwarkSMP")
+        title_label = QLabel("QwarkSMP Launcher")
         title_label.setStyleSheet("""
             QLabel {
                 font-size: 24px;
@@ -236,7 +237,7 @@ class QwarkSMPLauncher(QMainWindow):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
 
-        subtitle_label = QLabel("Minecraft 1.21.1 avec Fabric")
+        subtitle_label = QLabel("Minecraft 1.21.1 fabric")
         subtitle_label.setStyleSheet("""
             QLabel {
                 font-size: 14px;
@@ -269,9 +270,9 @@ class QwarkSMPLauncher(QMainWindow):
         status_layout.setSpacing(10)
 
         self.minecraft_status = StatusIndicator("Minecraft 1.21.1")
-        self.fabric_status = StatusIndicator("Chargeur de mods Fabric")
+        self.fabric_status = StatusIndicator("Fabric")
         self.mods_status = StatusIndicator("Mods requis (4)")
-        self.authlib_status = StatusIndicator("Injecteur Authlib")
+        self.authlib_status = StatusIndicator("Authlib-Injector")
 
         status_layout.addWidget(self.minecraft_status)
         status_layout.addWidget(self.fabric_status)
@@ -281,7 +282,7 @@ class QwarkSMPLauncher(QMainWindow):
         layout.addWidget(status_group)
 
         # Configuration section
-        config_group = QGroupBox("Configuration de lancement")
+        config_group = QGroupBox("Configuration Du launcher")
         config_group.setStyleSheet("""
             QGroupBox {
                 font-size: 14px;
@@ -336,11 +337,11 @@ class QwarkSMPLauncher(QMainWindow):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
 
-        self.setup_btn = QPushButton("Configurer le lanceur")
+        self.setup_btn = QPushButton("Configurer Le Launcher")
         self.setup_btn.clicked.connect(self.start_setup)
         self.setup_btn.setFixedHeight(45)
 
-        self.launch_btn = QPushButton("Lancer Minecraft")
+        self.launch_btn = QPushButton("Se Connecter")
         self.launch_btn.clicked.connect(self.launch_minecraft)
         self.launch_btn.setFixedHeight(45)
         self.launch_btn.setVisible(False)
@@ -398,7 +399,7 @@ class QwarkSMPLauncher(QMainWindow):
         # Show launch button if everything is ready
         if self.launcher.is_setup_complete():
             self.launch_btn.setVisible(True)
-            self.setup_btn.setText("Réinstaller les composants")
+            self.setup_btn.setText("Réinstaller Les Dépendences")
             self.on_username_changed(self.username_input.text())
 
     def start_setup(self):
@@ -408,7 +409,7 @@ class QwarkSMPLauncher(QMainWindow):
         self.progress_bar.setVisible(True)
         self.progress_label.setVisible(True)
         self.progress_bar.setRange(0, 0)  # Indeterminate progress
-        self.progress_label.setText("Démarrage de la configuration...")
+        self.progress_label.setText("Démarrage")
 
         # Reset status to pending
         self.minecraft_status.set_pending()
@@ -478,7 +479,7 @@ class QwarkSMPLauncher(QMainWindow):
         self.setup_btn.setEnabled(True)
         
         if success:
-            QMessageBox.information(self, "Lancement réussi", "Minecraft lancé avec succès!\n\nLe lanceur sera réduit en arrière-plan.\nRestaurez-le depuis la barre système quand Minecraft fermera.")
+            QMessageBox.information(self, "Lancement réussi", "Minecraft lancé avec succès!\n\nLe launcher sera réduit en arrière-plan.")
             
             # Keep launcher alive but minimized
             # Don't close automatically - let user close manually
@@ -497,7 +498,7 @@ class QwarkSMPLauncher(QMainWindow):
             tray_menu = QMenu()
             
             # Show/Hide action
-            self.show_action = QAction("Afficher le lanceur", self)
+            self.show_action = QAction("Afficher le launcher", self)
             self.show_action.triggered.connect(self.show_from_tray)
             tray_menu.addAction(self.show_action)
             
@@ -553,7 +554,7 @@ class QwarkSMPLauncher(QMainWindow):
             reply = QMessageBox.question(
                 self, 
                 "Minecraft en cours d'exécution", 
-                "Minecraft est toujours en cours d'exécution. Êtes-vous sûr de vouloir fermer le lanceur ?\n\nCela n'affectera pas votre jeu.",
+                "Minecraft est toujours en cours d'exécution. Êtes-vous sûr de vouloir fermer le launcher ?\n\nCela n'affectera pas votre jeu.",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No
             )
