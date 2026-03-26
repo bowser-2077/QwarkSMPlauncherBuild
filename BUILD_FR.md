@@ -152,3 +152,4 @@ Les exécutables construits sont prêts pour :
 
 baguette
 baguetteV2
+baguette de tes mort
