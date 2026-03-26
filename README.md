@@ -2,7 +2,7 @@
 
 A custom Minecraft launcher for QwarkSMP server, featuring automatic setup and simple username authentication.
 
-## Features
+## Featuress
 
 - **Automatic Setup**: One-click installation of Minecraft 1.21.1 with Fabric
 - **Mod Management**: Automatic download and installation of required mods
