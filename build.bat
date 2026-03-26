@@ -38,7 +38,7 @@ echo [INFO] Building for Windows...
 pyinstaller --onefile ^
            --windowed ^
            --name "QwarkSMPLauncher" ^
-           --icon "launcher_icon.png" ^
+           --icon "%cd%\launcher_icon.png" ^
            --add-data "%cd%\launcher_backend.py;." ^
            --add-data "%cd%\requirements.txt;." ^
            --distpath "%BUILD_DIR%\windows" ^
