@@ -20,6 +20,7 @@ build.bat
 ### 3. `build_all.sh` (Linux/macOS)
 Script de build multi-plateforme amélioré avec meilleur packaging.
 
+
 ```bash
 ./build_all.sh
 ```
