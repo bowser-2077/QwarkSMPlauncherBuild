@@ -108,10 +108,10 @@ case "$CURRENT_OS" in
         build_for_platform "Linux" "linux" "launcher_icon.png"
         ;;
     Darwin*)
-        build_for_platform "macOS" "macos" "launcher_icon.png"
+        build_for_platform "macOS" "macos" "launcher_icon.icns"
         ;;
     CYGWIN*|MINGW*|MSYS*)
-        build_for_platform "Windows" "windows" "launcher_icon.png"
+        build_for_platform "Windows" "windows" "launcher_icon.ico"
         ;;
     *)
         print_warning "Unknown OS: $CURRENT_OS"
