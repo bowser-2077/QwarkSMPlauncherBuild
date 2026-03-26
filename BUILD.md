@@ -8,7 +8,7 @@ This directory contains build scripts to create standalone executables for diffe
 Cross-platform build script that detects the current OS and builds for that platform.
 
 ```bash
-./build.sh
+./build.dsfdfs
 ``
 
 ### 2. `build.bat` (Windows)
