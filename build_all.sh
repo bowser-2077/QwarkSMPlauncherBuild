@@ -176,51 +176,6 @@ print_status "Cleaning up..."
 rm -f launcher_icon.png
 rm -rf build_env
 
-# Create release info only if it doesn't exist
-if [ ! -f "$BUILD_DIR/RELEASE_INFO.txt" ]; then
-    cat > "$BUILD_DIR/RELEASE_INFO.txt" << EOF
-QwarkSMP Launcher - Cross-Platform Build
-======================================
-
-Build Date: $(date)
-Build Platform: $(uname -s)
-
-Platform-Specific Packages:
-- Linux: QwarkSMPLauncher-linux.tar.gz
-- Windows: QwarkSMPLauncher-windows.zip (if built on Windows)
-- macOS: QwarkSMPLauncher-macos.tar.gz (if built on macOS)
-
-Installation Instructions:
-1. Download the package for your operating system
-2. Extract the archive
-3. Run the executable:
-   - Linux: ./QwarkSMPLauncher
-   - Windows: QwarkSMPLauncher.exe
-   - macOS: Open QwarkSMPLauncher.app
-
-System Requirements:
-- No Python installation required (bundled)
-- Java 21+ for Minecraft
-- Internet connection for initial setup
-- 2GB+ RAM recommended
-
-Features:
-- Modern PyQt6 desktop interface
-- Username-based authentication with authlib-injector
-- Automatic Minecraft 1.21.1 + Fabric setup
-- Required mods auto-download
-- System tray integration
-- Background operation
-- Cross-platform compatibility
-- French localization
-
-Technical Details:
-- Built with PyInstaller for standalone executables
-- All dependencies bundled
-- No external dependencies required
-EOF
-fi
-
 # Summary
 print_success "Build process completed!"
 echo ""
