@@ -85,7 +85,6 @@ build_for_platform() {
     pyinstaller --onefile \
                --windowed \
                --name "QwarkSMPLauncher" \
-               --icon "$(pwd)/launcher_icon.png" \
                --add-data "$(pwd)/launcher_backend.py:." \
                --add-data "$(pwd)/requirements.txt:." \
                --distpath "$BUILD_DIR/$target" \
@@ -116,7 +115,7 @@ case "$CURRENT_OS" in
     *)
         print_warning "Unknown OS: $CURRENT_OS"
         print_status "Building for Linux as default..."
-        build_for_platform "Linux" "linux" "launcher_icon.png"
+        build_for_platform "Linux" "linux" "launcher_icon.icns"
         ;;
 esac
 
