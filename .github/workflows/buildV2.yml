@@ -339,7 +339,6 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
-      releases: write
     steps:
     - name: Download all artifacts
       uses: actions/download-artifact@v3
