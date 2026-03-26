@@ -33,34 +33,14 @@ if exist "%BUILD_DIR%" (
 )
 mkdir "%BUILD_DIR%"
 
-REM Create icon
-echo [INFO] Creating launcher icon...
-python -c "
-import sys
-from PyQt6.QtWidgets import QApplication
-from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont
-from PyQt6.QtCore import Qt
-
-app = QApplication([])
-pixmap = QPixmap(256, 256)
-pixmap.fill(QColor('#667eea'))
-painter = QPainter(pixmap)
-painter.setPen(QColor('#ffffff'))
-painter.setFont(QFont('Arial', 160, QFont.Weight.Bold))
-painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, 'Q')
-painter.end()
-pixmap.save('launcher_icon.png')
-app.quit()
-"
-
 REM Build for Windows
 echo [INFO] Building for Windows...
 pyinstaller --onefile ^
            --windowed ^
            --name "QwarkSMPLauncher" ^
            --icon "launcher_icon.png" ^
-           --add-data "launcher_backend.py;." ^
-           --add-data "requirements.txt;." ^
+           --add-data "%cd%\launcher_backend.py;." ^
+           --add-data "%cd%\requirements.txt;." ^
            --distpath "%BUILD_DIR%\windows" ^
            --workpath "%BUILD_DIR%\windows\build" ^
            --specpath "%BUILD_DIR%\windows" ^
