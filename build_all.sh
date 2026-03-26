@@ -45,11 +45,18 @@ mkdir -p "$BUILD_DIR"
 
 # Create icon
 print_status "Creating launcher icon..."
-python3 -c "
+if [ -f "launcher_icon.png" ]; then
+    print_success "Icon already exists, skipping creation"
+else
+    python3 -c "
 import sys
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont
 from PyQt6.QtCore import Qt
+import os
+
+# Set display for headless environment
+os.environ['DISPLAY'] = ':99'
 
 app = QApplication([])
 pixmap = QPixmap(256, 256)
@@ -62,6 +69,7 @@ painter.end()
 pixmap.save('launcher_icon.png')
 app.quit()
 "
+fi
 
 # Function to build for specific platform
 build_for_platform() {
@@ -77,7 +85,7 @@ build_for_platform() {
     pyinstaller --onefile \
                --windowed \
                --name "QwarkSMPLauncher" \
-               --icon "launcher_icon.png" \
+               --icon "$(pwd)/launcher_icon.png" \
                --add-data "$(pwd)/launcher_backend.py:." \
                --add-data "$(pwd)/requirements.txt:." \
                --distpath "$BUILD_DIR/$target" \
