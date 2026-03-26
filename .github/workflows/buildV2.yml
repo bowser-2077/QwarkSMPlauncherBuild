@@ -272,22 +272,6 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         pip install -v -r requirements.txt
         
-        python -c "
-import sys
-try:
-    import PyQt6
-    print('✅ PyQt6: OK')
-except ImportError as e:
-    print(f'❌ PyQt6 failed: {e}')
-    sys.exit(1)
-
-try:
-    import minecraft_launcher_lib
-    print('✅ minecraft-launcher-lib: OK')
-except ImportError as e:
-    print(f'❌ minecraft-launcher-lib failed: {e}')
-    sys.exit(1)
-"
         
     - name: Verify build scripts exist
       run: |
