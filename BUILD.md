@@ -9,7 +9,7 @@ Cross-platform build script that detects the current OS and builds for that plat
 
 ```bash
 ./build.sh
-```
+``
 
 ### 2. `build.bat` (Windows)
 Windows-specific build script with batch commands.
