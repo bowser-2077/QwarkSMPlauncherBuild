@@ -4,7 +4,7 @@ Ce répertoire contient les scripts de build pour créer des exécutables autono
 
 ## Scripts de Build
 ### 1. `build.sh` (Linux/macOS)
-Script de build multi-plateforme qui détecte le système d'exploitation actuel et construit pour cette plateforme.
+Script de build multi-plateforme qui détecte le système d'edsfsdfsdfxploitation actuel et construit pour cette plateforme.
 
 ```bashxcwc
 ./build.sh
