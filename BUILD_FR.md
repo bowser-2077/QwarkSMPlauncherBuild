@@ -151,3 +151,4 @@ Les exécutables construits sont prêts pour :
 - Inclusion dans gestionnaires de packages (si désiré)
 
 baguette
+baguetteV2
