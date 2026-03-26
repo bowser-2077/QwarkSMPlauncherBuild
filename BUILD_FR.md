@@ -149,3 +149,5 @@ Les exécutables construits sont prêts pour :
 - Téléversement vers services d'hébergement de fichiers
 - Intégration avec gestionnaires de téléchargement
 - Inclusion dans gestionnaires de packages (si désiré)
+
+baguette
