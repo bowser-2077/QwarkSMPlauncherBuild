@@ -1,0 +1,523 @@
+name: Build QwarkSMP Launcher
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual build'
+        required: false
+        default: 'Manual build trigger'
+        type: string
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Verify system requirements
+      run: |
+        echo "🔍 Checking system requirements..."
+        
+        # Check Python version
+        python_version=$(python --version 2>&1 | grep -Po '(?<=Python )\K[^ ]+' || echo "unknown")
+        echo "✅ Python version: $python_version"
+        
+        # Check disk space
+        available_space=$(df -BG / | tail -1 | awk '{print $4}')
+        required_space=2048  # 2GB in KB
+        if [ "$available_space" -lt "$required_space" ]; then
+          echo "❌ Insufficient disk space: ${available_space}KB available, ${required_space}KB required"
+          exit 1
+        fi
+        echo "✅ Disk space: ${available_space}KB available"
+        
+        # Check permissions
+        if [ ! -w "." ]; then
+          echo "❌ No write permissions in current directory"
+          exit 1
+        fi
+        echo "✅ Write permissions: OK"
+        
+    - name: Install dependencies
+      run: |
+        echo "📦 Installing Python dependencies..."
+        
+        # Upgrade pip
+        python -m pip install --upgrade pip setuptools wheel
+        
+        # Install requirements with verbose output
+        pip install -v -r requirements.txt
+        
+        # Verify critical packages
+        python -c "
+import sys
+try:
+    import PyQt6
+    print('✅ PyQt6: OK')
+except ImportError as e:
+    print(f'❌ PyQt6 failed: {e}')
+    sys.exit(1)
+
+try:
+    import minecraft_launcher_lib
+    print('✅ minecraft-launcher-lib: OK')
+except ImportError as e:
+    print(f'❌ minecraft-launcher-lib failed: {e}')
+    sys.exit(1)
+
+try:
+    import requests
+    print('✅ requests: OK')
+except ImportError as e:
+    print(f'❌ requests failed: {e}')
+    sys.exit(1)
+"
+        
+    - name: Verify build scripts exist
+      run: |
+        echo "🔍 Verifying build scripts..."
+        
+        if [ ! -f "build_all.sh" ]; then
+          echo "❌ build_all.sh not found"
+          exit 1
+        fi
+        
+        if [ ! -x "build_all.sh" ]; then
+          echo "❌ build_all.sh is not executable"
+          chmod +x build_all.sh
+        fi
+        
+        if [ ! -f "launcher_gui.py" ]; then
+          echo "❌ launcher_gui.py not found"
+          exit 1
+        fi
+        
+        if [ ! -f "launcher_backend.py" ]; then
+          echo "❌ launcher_backend.py not found"
+          exit 1
+        fi
+        
+        echo "✅ All required files found and accessible"
+        
+    - name: Build for Linux
+      run: |
+        echo "🚀 Starting Linux build..."
+        
+        # Set environment variables
+        export BUILD_NUMBER=${{ github.run_number }}
+        export COMMIT_SHA=${{ github.sha }}
+        export BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        
+        # Run build with error handling
+        if ./build_all.sh; then
+          echo "✅ Linux build completed successfully"
+        else
+          echo "❌ Linux build failed"
+          exit 1
+        fi
+        
+    - name: Verify build output
+      run: |
+        echo "🔍 Verifying build output..."
+        
+        # Check if executable was created
+        if [ ! -f "dist_build/linux/QwarkSMPLauncher" ]; then
+          echo "❌ Linux executable not found"
+          exit 1
+        fi
+        
+        # Check if package was created
+        if [ ! -f "dist_build/linux/QwarkSMPLauncher-linux.tar.gz" ]; then
+          echo "❌ Linux package not found"
+          exit 1
+        fi
+        
+        # Check executable size
+        exe_size=$(stat -c%s "dist_build/linux/QwarkSMPLauncher")
+        if [ "$exe_size" -lt 1000000 ]; then  # Less than 1MB
+          echo "❌ Executable too small: ${exe_size} bytes"
+          exit 1
+        fi
+        
+        echo "✅ Build output verification passed"
+        echo "📊 Executable size: $(du -h dist_build/linux/QwarkSMPLauncher | cut -f1)"
+        echo "📦 Package size: $(du -h dist_build/linux/QwarkSMPLauncher-linux.tar.gz | cut -f1)"
+        
+    - name: Upload Linux artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: qwarksmp-launcher-linux
+        path: dist_build/linux/QwarkSMPLauncher-linux.tar.gz
+        retention-days: 30
+        if-no-files-found: error
+
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+    defaults:
+      run:
+        shell: cmd
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~\AppData\Local\pip\cache
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Verify system requirements
+      run: |
+        echo "🔍 Checking system requirements..."
+        
+        # Check Python version
+        python --version
+        
+        # Check disk space
+        for /f "tokens=3" %%i in ('dir /-c ^%TEMP% ^| find /c "" 2^>nul') do set "FREE_SPACE=%%~li"
+        set /a FREE_SPACE=!FREE_SPACE:~0,2!
+        if !FREE_SPACE! LSS 2097152 (
+          echo "❌ Insufficient disk space: !FREE_SPACE! bytes available"
+          exit /b 1
+        )
+        echo "✅ Disk space: !FREE_SPACE! bytes available"
+        
+    - name: Install dependencies
+      run: |
+        echo "📦 Installing Python dependencies..."
+        
+        python -m pip install --upgrade pip setuptools wheel
+        pip install -v -r requirements.txt
+        
+        # Verify critical packages
+        python -c "
+import sys
+try:
+    import PyQt6
+    print('✅ PyQt6: OK')
+except ImportError as e:
+    print(f'❌ PyQt6 failed: {e}')
+    sys.exit(1)
+
+try:
+    import minecraft_launcher_lib
+    print('✅ minecraft-launcher-lib: OK')
+except ImportError as e:
+    print(f'❌ minecraft-launcher-lib failed: {e}')
+    sys.exit(1)
+"
+        
+    - name: Verify build scripts exist
+      run: |
+        echo "🔍 Verifying build scripts..."
+        
+        if not exist "build.bat" (
+          echo "❌ build.bat not found"
+          exit /b 1
+        )
+        
+        if not exist "launcher_gui.py" (
+          echo "❌ launcher_gui.py not found"
+          exit /b 1
+        )
+        
+        if not exist "launcher_backend.py" (
+          echo "❌ launcher_backend.py not found"
+          exit /b 1
+        )
+        
+        echo "✅ All required files found and accessible"
+        
+    - name: Build for Windows
+      run: |
+        echo "🚀 Starting Windows build..."
+        
+        set BUILD_NUMBER=%GITHUB_RUN_NUMBER%
+        set COMMIT_SHA=%GITHUB_SHA%
+        
+        call build.bat
+        if %ERRORLEVEL% neq 0 (
+          echo "❌ Windows build failed"
+          exit /b 1
+        )
+        
+        echo "✅ Windows build completed successfully"
+        
+    - name: Verify build output
+      run: |
+        echo "🔍 Verifying build output..."
+        
+        if not exist "dist_build\windows\QwarkSMPLauncher.exe" (
+          echo "❌ Windows executable not found"
+          exit /b 1
+        )
+        
+        if not exist "dist_build\windows\QwarkSMPLauncher-windows.zip" (
+          echo "❌ Windows package not found"
+          exit /b 1
+        )
+        
+        for %%F in ("dist_build\windows\QwarkSMPLauncher.exe") do set "EXE_SIZE=%%~zF"
+        if !EXE_SIZE! LSS 1000000 (
+          echo "❌ Executable too small: !EXE_SIZE! bytes"
+          exit /b 1
+        )
+        
+        echo "✅ Build output verification passed"
+        echo "📊 Executable size: !EXE_SIZE! bytes"
+        dir "dist_build\windows\QwarkSMPLauncher-windows.zip" | find "QwarkSMPLauncher-windows.zip"
+        
+    - name: Upload Windows artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: qwarksmp-launcher-windows
+        path: dist_build/windows/QwarkSMPLauncher-windows.zip
+        retention-days: 30
+        if-no-files-found: error
+
+  build-macos:
+    runs-on: macos-latest
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/Library/Caches/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Verify system requirements
+      run: |
+        echo "🔍 Checking system requirements..."
+        
+        # Check Python version
+        python_version=$(python --version 2>&1 | grep -Po '(?<=Python )\K[^ ]+' || echo "unknown")
+        echo "✅ Python version: $python_version"
+        
+        # Check disk space
+        available_space=$(df -BG / | tail -1 | awk '{print $4}')
+        required_space=2048  # 2GB in KB
+        if [ "$available_space" -lt "$required_space" ]; then
+          echo "❌ Insufficient disk space: ${available_space}KB available, ${required_space}KB required"
+          exit 1
+        fi
+        echo "✅ Disk space: ${available_space}KB available"
+        
+    - name: Install dependencies
+      run: |
+        echo "📦 Installing Python dependencies..."
+        
+        python -m pip install --upgrade pip setuptools wheel
+        pip install -v -r requirements.txt
+        
+        # Verify critical packages
+        python -c "
+import sys
+try:
+    import PyQt6
+    print('✅ PyQt6: OK')
+except ImportError as e:
+    print(f'❌ PyQt6 failed: {e}')
+    sys.exit(1)
+
+try:
+    import minecraft_launcher_lib
+    print('✅ minecraft-launcher-lib: OK')
+except ImportError as e:
+    print(f'❌ minecraft-launcher-lib failed: {e}')
+    sys.exit(1)
+"
+        
+    - name: Verify build scripts exist
+      run: |
+        echo "🔍 Verifying build scripts..."
+        
+        if [ ! -f "build_all.sh" ]; then
+          echo "❌ build_all.sh not found"
+          exit 1
+        fi
+        
+        if [ ! -x "build_all.sh" ]; then
+          echo "❌ build_all.sh is not executable"
+          chmod +x build_all.sh
+        fi
+        
+        if [ ! -f "launcher_gui.py" ]; then
+          echo "❌ launcher_gui.py not found"
+          exit 1
+        fi
+        
+        if [ ! -f "launcher_backend.py" ]; then
+          echo "❌ launcher_backend.py not found"
+          exit 1
+        fi
+        
+        echo "✅ All required files found and accessible"
+        
+    - name: Build for macOS
+      run: |
+        echo "🚀 Starting macOS build..."
+        
+        export BUILD_NUMBER=${{ github.run_number }}
+        export COMMIT_SHA=${{ github.sha }}
+        export BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        
+        # Run build with error handling
+        if ./build_all.sh; then
+          echo "✅ macOS build completed successfully"
+        else
+          echo "❌ macOS build failed"
+          exit 1
+        fi
+        
+    - name: Verify build output
+      run: |
+        echo "🔍 Verifying build output..."
+        
+        # Check if executable was created
+        if [ ! -d "dist_build/macos/QwarkSMPLauncher.app" ]; then
+          echo "❌ macOS app bundle not found"
+          exit 1
+        fi
+        
+        # Check if package was created
+        if [ ! -f "dist_build/macos/QwarkSMPLauncher-macos.tar.gz" ]; then
+          echo "❌ macOS package not found"
+          exit 1
+        fi
+        
+        echo "✅ Build output verification passed"
+        echo "📊 Package size: $(du -h dist_build/macos/QwarkSMPLauncher-macos.tar.gz | cut -f1)"
+        
+    - name: Upload macOS artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: qwarksmp-launcher-macos
+        path: dist_build/macos/QwarkSMPLauncher-macos.tar.gz
+        retention-days: 30
+        if-no-files-found: error
+
+  create-release:
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+      releases: write
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: release-assets
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: release-assets/*
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        name: ${{ github.ref_name }}
+        tag_name: ${{ github.ref_name }}
+        body: |
+          ## QwarkSMP Launcher ${{ github.ref_name }}
+          
+          ### 📦 Downloads
+          
+          #### Linux
+          - **QwarkSMPLauncher-linux.tar.gz**: Standalone Linux executable with French localization
+          
+          #### Windows  
+          - **QwarkSMPLauncher-windows.zip**: Standalone Windows executable with French localization
+          
+          #### macOS
+          - **QwarkSMPLauncher-macos.tar.gz**: Standalone macOS app bundle with French localization
+          
+          ### ✨ Features
+          - Modern PyQt6 desktop interface
+          - Username-based authentication with authlib-injector  
+          - Automatic Minecraft 1.21.1 + Fabric setup
+          - Required mods auto-download
+          - System tray integration
+          - Background operation
+          - Cross-platform compatibility
+          - Complete French localization
+          
+          ### 🚀 Installation
+          1. Download the package for your operating system
+          2. Extract the archive
+          3. Run the executable:
+             - Linux: `./QwarkSMPLauncher`
+             - Windows: `QwarkSMPLauncher.exe`  
+             - macOS: Open `QwarkSMPLauncher.app`
+          
+          ### 📋 Requirements
+          - No Python installation required (bundled)
+          - Java 21+ for Minecraft
+          - Internet connection for initial setup
+          - 2GB+ RAM recommended
