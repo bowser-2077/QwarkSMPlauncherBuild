@@ -3,7 +3,6 @@
 Ce répertoire contient les scripts de build pour créer des exécutables autonomes pour différentes plateformes.
 
 ## Scripts de Build
-
 ### 1. `build.sh` (Linux/macOS)
 Script de build multi-plateforme qui détecte le système d'exploitation actuel et construit pour cette plateforme.
 
