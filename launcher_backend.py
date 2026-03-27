@@ -16,18 +16,28 @@ class QwarkLauncher:
         self.mod_loader = "fabric"
         self.profile_name = "QwarkSMP"
         
+        # Custom instance directory
+        self.instance_directory = os.path.join(self.minecraft_directory, "QwarkSMP")
+        
         # Authlib configuration
-        self.authlib_jar_path = os.path.join(self.minecraft_directory, "libs", "authlib-injector.jar")
+        self.authlib_jar_path = os.path.join(self.instance_directory, "libs", "authlib-injector.jar")
         self.authlib_url = "https://auth-demo.yushi.moe"
         self.authlib_download_url = "https://github.com/bowser-2077/CascadeMC/raw/refs/heads/main/libs/authlib-injector.jar"
-        self.username_file = os.path.join(self.minecraft_directory, "username.txt")
+        self.username_file = os.path.join(self.instance_directory, "username.txt")
         
         # Mods to download
         self.mods = [
-            "https://github.com/bowser-2077/QwarkSMPmods/raw/refs/heads/main/autojoin-mod-1.0.0.jar",
-            "https://github.com/bowser-2077/QwarkSMPmods/raw/refs/heads/main/cloth-config-15.0.140-fabric.jar", 
+            # Core mods
             "https://github.com/bowser-2077/QwarkSMPmods/raw/refs/heads/main/fabric-api-0.116.9+1.21.1.jar",
-            "https://github.com/bowser-2077/QwarkSMPmods/raw/refs/heads/main/modmenu-11.0.4.jar"
+            "https://github.com/bowser-2077/QwarkSMPmods/raw/refs/heads/main/cloth-config-15.0.140-fabric.jar",
+            "https://github.com/bowser-2077/QwarkSMPmods/raw/refs/heads/main/modmenu-11.0.4.jar",
+            "https://github.com/bowser-2077/QwarkSMPmods/raw/refs/heads/main/autojoin-mod-1.0.0.jar",
+            # Performance mods
+            "https://cdn.modrinth.com/data/AANobbMI/versions/u1OEbNKx/sodium-fabric-0.6.13%2Bmc1.21.1.jar",
+            "https://cdn.modrinth.com/data/NNAgCjsB/versions/zzguHbcL/entityculling-fabric-1.10.0-mc1.21.1.jar",
+            "https://cdn.modrinth.com/data/YL57xq9U/versions/zsoi0dso/iris-fabric-1.8.8%2Bmc1.21.1.jar",
+            "https://cdn.modrinth.com/data/uXXizFIs/versions/sOzRw3CG/ferritecore-7.0.3-fabric.jar",
+            "https://cdn.modrinth.com/data/OmQzuQFa/versions/BSvW2cAf/LazyDFU-%5BUNOFFICIAL%5D-1.21.jar"
         ]
         
         # Ensure directories exist
@@ -37,11 +47,12 @@ class QwarkLauncher:
         """Create necessary directories"""
         directories = [
             self.minecraft_directory,
-            os.path.join(self.minecraft_directory, "mods"),
-            os.path.join(self.minecraft_directory, "versions"),
-            os.path.join(self.minecraft_directory, "libraries"),
-            os.path.join(self.minecraft_directory, "assets"),
-            os.path.join(self.minecraft_directory, "libs")
+            self.instance_directory,
+            os.path.join(self.instance_directory, "mods"),
+            os.path.join(self.instance_directory, "versions"),
+            os.path.join(self.instance_directory, "libraries"),
+            os.path.join(self.instance_directory, "assets"),
+            os.path.join(self.instance_directory, "libs")
         ]
         
         for directory in directories:
@@ -106,7 +117,7 @@ class QwarkLauncher:
             response.raise_for_status()
             
             filename = url.split('/')[-1]
-            mod_path = os.path.join(self.minecraft_directory, "mods", filename)
+            mod_path = os.path.join(self.instance_directory, "mods", filename)
             
             total_size = int(response.headers.get('content-length', 0))
             downloaded = 0
@@ -184,9 +195,11 @@ class QwarkLauncher:
         """Get the installed version string for launching"""
         try:
             fabric_loader = minecraft_launcher_lib.mod_loader.get_mod_loader("fabric")
-            return fabric_loader.get_installed_version(self.version, fabric_loader.get_latest_loader_version(self.version))
+            latest_loader = fabric_loader.get_latest_loader_version(self.version)
+            return f"fabric-loader-{latest_loader}-{self.version}"
         except Exception:
-            return f"fabric-loader-{self.version}"
+            # Fallback to the standard format
+            return f"fabric-loader-0.18.5-{self.version}"
     
     def launch_minecraft(self, username: str, max_ram_gb: int = 4, progress_callback=None) -> bool:
         """Launch Minecraft with authlib injection"""
@@ -222,17 +235,24 @@ class QwarkLauncher:
             # Get launch command
             command = minecraft_launcher_lib.command.get_minecraft_command(
                 installed_version,
-                self.minecraft_directory,
+                self.minecraft_directory,  # Use main minecraft directory for versions
                 options
             )
             
             if progress_callback:
                 progress_callback("Launching Minecraft...")
             
-            # Launch Minecraft in a separate thread
+            # Launch Minecraft in a separate thread (no terminal window)
             def launch():
                 try:
-                    subprocess.run(command, cwd=self.minecraft_directory)
+                    # Hide terminal window by using appropriate launch method
+                    if os.name == 'nt':  # Windows
+                        startupinfo = subprocess.STARTUPINFO()
+                        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                        startupinfo.wShowWindow = subprocess.SW_HIDE
+                        subprocess.run(command, cwd=self.instance_directory, startupinfo=startupinfo)
+                    else:  # Linux/macOS
+                        subprocess.run(command, cwd=self.instance_directory, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 except Exception as e:
                     if progress_callback:
                         progress_callback(f"Launch failed: {str(e)}")
@@ -248,7 +268,7 @@ class QwarkLauncher:
     
     def is_setup_complete(self) -> bool:
         """Check if the launcher is fully set up"""
-        mods_dir = os.path.join(self.minecraft_directory, "mods")
+        mods_dir = os.path.join(self.instance_directory, "mods")
         
         # Check if Minecraft is installed
         if not minecraft_launcher_lib.utils.is_version_valid(self.version, self.minecraft_directory):
@@ -276,7 +296,7 @@ class QwarkLauncher:
     
     def get_setup_status(self) -> Dict[str, bool]:
         """Get detailed setup status"""
-        mods_dir = os.path.join(self.minecraft_directory, "mods")
+        mods_dir = os.path.join(self.instance_directory, "mods")
         mod_files = [url.split('/')[-1] for url in self.mods]
         
         return {
